@@ -502,13 +502,15 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
   // define a new vector for storing old values of ls
   VecDuplicate(lsVec, &ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
   VecCopy(lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
+  PetscReal maxError = 1.0;
+  PetscInt i = 0;
   //PetscReal ls_tolerance = 0.1;
   
-  //while ( ls_tolerance > 1e-5 ) {
-  for (PetscInt i = 0; i <= 10; ++i) {
+  while ( maxError > 1e-6 ) {
+  //for (PetscInt i = 0; i <= 8; ++i) {
 	//-------------------------------------recalculating the unit normal vector------------------------------------------------------//
 	  PetscScalar normal[dim*cutcellCount];
-	  PetscInt currentCutCell = 0;  // Introduce an index to track which cut cell we're working with
+	  PetscInt currentCutCell = 0;  // Introduce an index to track which cut-cell we're working with
 	  
 	  for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
 	    PetscInt cell = cellRange.GetPoint(c);
@@ -554,7 +556,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 	      PetscReal *lsVertVals = NULL;
 	      DMGetWorkArray(vofDM, nv, MPIU_REAL, &lsVertVals) >> ablate::utilities::PetscUtilities::checkError;
 	
-	      // Level set values at the vertices
+	      // Level set values at the vertices based on new unit normal vectors
 	      PetscScalar n_new[dim];
 	      std::copy(&normal[currentCutCell*dim], &normal[(currentCutCell+1)*dim], n_new);
 	      ablate::levelSet::Utilities::VertexLevelSet_VOF(vofDM, cell, *vofVal, n_new, &lsVertVals);
@@ -589,11 +591,13 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 	    }
 	  }
 	  
-	  //Vec ls_diff;
-	  //VecWAXPY(ls_diff, -1.0, lsVec, ls_oldVal);
-      // Compute the L2 norm of the difference vector
-      //VecNorm(ls_diff, NORM_2, &ls_tolerance);
-      //VecDestroy(&ls_diff);
+	  Vec ls_diff;  // Temporary vector to store the difference
+	  VecDuplicate(lsVec, &ls_diff) >> ablate::utilities::PetscUtilities::checkError;
+	  VecWAXPY(ls_diff, -1.0, lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
+	  VecNorm(ls_diff, NORM_INFINITY, &maxError) >> ablate::utilities::PetscUtilities::checkError;
+
+	  VecDestroy(&ls_diff);  // Clean up the temporary vector
+      printf("%d: %e\n", i, maxError);
 	  VecCopy(lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
 	  i++;
 	  	  
