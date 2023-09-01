@@ -18,7 +18,7 @@ Direction RiemannStiff::RiemannStiffFluxFunction(void *ctx, PetscReal uL, PetscR
      * rhoL: density on the left cell center
      * pR: pressure on the right cell center
      * pL: pressure on the left cell center
-     * aR: SoS on the  right center cell
+     * aR: SoS on the right center cell
      * aL: SoS on the left center cell
      * pstar: pressure across contact surface
      */

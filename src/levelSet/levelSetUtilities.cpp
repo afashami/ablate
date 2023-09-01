@@ -101,6 +101,158 @@ void ablate::levelSet::Utilities::VertexToVertexGrad(std::shared_ptr<ablate::dom
     DMPlexVertexGradFromVertex(dm, p, vec, field->id, 0, g) >> ablate::utilities::PetscUtilities::checkError;
 }
 
+
+//// There should be an Internal function which does the common parts of the two VertexUpwindGrad calls to remove duplication
+//void ablate::levelSet::Utilities::VertexUpwindGrad(DM dm, Vec vec, const PetscInt fid, const PetscInt p, const PetscReal direction, PetscReal *g) {
+//  // Given a field determine the gradient at a vertex by doing a weighted average of the surrounding cell-centered gradients.
+//  // The upwind direction is determined using the dot product between the cell-centered gradient and the vector connecting the cell-center
+//  //    and the vertex
+
+//  PetscInt          dim;
+//  PetscReal         totalVol = 0.0;
+//  PetscScalar       *coords;
+//  const PetscScalar *array;
+
+//  DMGetDimension(dm, &dim) >> ablate::utilities::PetscUtilities::checkError;
+
+//  // Obtain all cells which use this vertex
+//  PetscInt nCells, *cells;
+//  DMPlexVertexGetCells(dm, p, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
+
+//  DMPlexVertexGetCoordinates(dm, 1, &p, &coords);
+
+//  VecGetArrayRead(vec, &array);
+
+//  for (PetscInt d = 0; d < dim; ++d) {
+//    g[d] = 0.0;
+//  }
+
+//  for (PetscInt c = 0; c < nCells; ++c) {
+
+//    PetscReal x0[3];
+//    DMPlexComputeCellGeometryFVM(dm, cells[c], NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
+
+//    PetscScalar *f;
+//    xDMPlexPointLocalRead(dm, cells[c], fid, array, &f) >> utilities::PetscUtilities::checkError;
+
+
+//    PetscScalar dot = 0.0;
+//    for (PetscInt d = 0; d < dim; ++d) {
+//      dot += f[d]*(coords[d] - x0[d]);
+//    }
+
+//    dot *= direction;
+
+//    if (dot>=0.0) {
+
+////      PetscReal vol;
+////      DMPlexComputeCellGeometryFVM(dm, cells[c], &vol, NULL, NULL) >> ablate::utilities::PetscUtilities::checkError;
+//      totalVol += dot;
+
+//      // Weighted average of the surrounding cell-center gradients.
+//      //  Note that technically this is (in 2D) the area of the quadrilateral that is formed by connecting
+//      //  the vertex, center of the neighboring edges, and the center of the triangle. As the three quadrilaterals
+//      //  that are formed this way all have the same area, there is no need to take into account the 1/3. Something
+//      //  similar should hold in 3D and for other cell types that ABLATE uses.
+//      for (PetscInt d = 0; d < dim; ++d) {
+//        g[d] += dot*f[d];
+//      }
+//    }
+
+//  }
+//  DMPlexVertexRestoreCoordinates(dm, 1, &p, &coords);
+//  DMPlexVertexRestoreCells(dm, p, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
+//  VecRestoreArrayRead(vec, &array) >> utilities::PetscUtilities::checkError;
+
+//  // Error checking
+//  if ( PetscAbs(totalVol) < ablate::utilities::Constants::small ) {
+//    throw std::runtime_error("ablate::levelSet::Utilities::VertexUpwindGrad encounted a situation where there are no upwind cells.");
+//  }
+
+//  for (PetscInt d = 0; d < dim; ++d) {
+//    g[d] /= totalVol;
+//  }
+//}
+
+
+/**
+  * Compute the upwind derivative
+  * @param dm - Domain of the data
+  * @param gradArray - Array storing the cell-center gradients
+  * @param cellToIndex - Petsc AO that convertes from DMPlex ordering to the index location in gradArray
+  * @param p - Vertex id
+  * @param direction - The direction to be considered upwind. +1 for standard upwind, -1 of downwind
+  * @param g - On input the surface area normal at a vertex. On output the upwind gradient at p
+  */
+void ablate::levelSet::Utilities::VertexUpwindGrad(DM dm, PetscReal *gradArray, AO cellToIndex, const PetscInt p, const PetscReal direction, PetscReal *g) {
+  // Given an array which stores cell-centered gradients compute the upwind direction
+  // The upwind direction is determined using the dot product between the vector u and the vector connecting the cell-center
+  //    and the vertex
+
+  PetscInt          dim;
+  PetscReal         weightTotal = 0.0;
+  PetscScalar       coords[3], n[3];
+
+  DMGetDimension(dm, &dim) >> ablate::utilities::PetscUtilities::checkError;
+
+  ablate::utilities::MathUtilities::NormVector(dim, g, n);
+
+  DMPlexComputeCellGeometryFVM(dm, p, NULL, coords, NULL) >> ablate::utilities::PetscUtilities::checkError;
+
+  for (PetscInt d = 0; d < dim; ++d) {
+    g[d] = 0.0;
+  }
+
+
+  // Obtain all cells which use this vertex
+  PetscInt nCells, *cells;
+  DMPlexVertexGetCells(dm, p, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
+
+  for (PetscInt c = 0; c < nCells; ++c) {
+    PetscReal x0[3];
+    DMPlexComputeCellGeometryFVM(dm, cells[c], NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
+
+    PetscInt id = cells[c];
+    AOApplicationToPetsc(cellToIndex, 1, &id);
+
+    if (id>-1) {  // If id==-1 then the cell is does not have any values in gradArray. Ignore it.
+
+      PetscReal dot = 0.0;
+      for (PetscInt d = 0; d < dim; ++d) {
+        dot += n[d]*(coords[d] - x0[d]);
+      }
+
+      dot *= direction;
+
+      if (dot>=0.0) {
+
+        weightTotal += dot;
+
+        // Weighted average of the surrounding cell-center gradients.
+        //  Note that technically this is (in 2D) the area of the quadrilateral that is formed by connecting
+        //  the vertex, center of the neighboring edges, and the center of the triangle. As the three quadrilaterals
+        //  that are formed this way all have the same area, there is no need to take into account the 1/3. Something
+        //  similar should hold in 3D and for other cell types that ABLATE uses.
+        for (PetscInt d = 0; d < dim; ++d) {
+          g[d] += dot*gradArray[id*dim + d];
+        }
+      }
+    }
+
+  }
+
+    // Error checking
+  if ( PetscAbs(weightTotal) < ablate::utilities::Constants::small ) {
+    throw std::runtime_error("ablate::levelSet::Utilities::VertexUpwindGrad encounted a situation where there are no upwind cells");
+  }
+
+  DMPlexVertexRestoreCells(dm, p, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
+
+  for (PetscInt d = 0; d < dim; ++d) {
+    g[d] /= weightTotal;
+  }
+}
+
 // Given a level set and normal at the cell center compute the level set values at the vertices assuming a straight interface
 void ablate::levelSet::Utilities::VertexLevelSet_LS(DM dm, const PetscInt p, const PetscReal c0, const PetscReal *n, PetscReal **c) {
     PetscInt dim, Nc, nVerts, i, j;
@@ -280,6 +432,10 @@ void ablate::levelSet::Utilities::VOF(std::shared_ptr<ablate::domain::SubDomain>
     DMPlexCellRestoreVertices(dm, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
 }
 
+  // Comment out the rest of the code so that we can focus on the cut-cells only
+
+  //    for the cut-cells won't be known yet.
+  // Now mark all of the necessary neighboring vertices. Note that this can't be put into the previous loop as all of the vertices
 
 
 

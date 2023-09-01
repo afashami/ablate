@@ -19,7 +19,8 @@
  *
  * Note: The intended use is to use either maxLevels OR maxDist OR minNumberCells.
  */
-PetscErrorCode DMPlexRestoreNeighbors(DM dm, PetscInt p, PetscInt maxLevels, PetscReal maxDist, PetscInt numberCells, PetscBool useCells, PetscBool returnVertices, PetscInt *nCells, PetscInt **cells);
+PetscErrorCode DMPlexRestoreNeighbors(DM dm, PetscInt p, PetscInt maxLevels, PetscReal maxDist, PetscInt numberCells, PetscBool useCells, PetscBool returnVertices, PetscInt *nCells,
+                                  PetscInt **cells);
 PetscErrorCode DMPlexGetNeighbors(DM dm, PetscInt p, PetscInt levels, PetscReal maxDist, PetscInt minNumberCells, PetscBool useCells, PetscBool returnNeighborVertices, PetscInt *nCells,
                                   PetscInt **cells);
 
@@ -30,6 +31,11 @@ PetscErrorCode DMPlexGetNeighbors(DM dm, PetscInt p, PetscInt levels, PetscReal 
  * @param cell - Cell containing the location. It will return -1 if xyz is not in the local portion of the DM.
  */
 PetscErrorCode DMPlexGetContainingCell(DM dm, const PetscScalar *xyz, PetscInt *cell);
+
+
+
+PetscErrorCode DMPlexFindCell(DM dm, const PetscScalar *xyz, PetscReal eps, PetscInt *cell);
+
 
 /**
  * Return the cell with a given cell center
@@ -115,6 +121,7 @@ PetscErrorCode DMPlexVertexGradFromCell(DM dm, const PetscInt v, Vec data, Petsc
  */
 PetscErrorCode DMPlexCellGradFromVertex(DM dm, const PetscInt c, Vec data, PetscInt fID, PetscInt offset, PetscScalar g[]);
 
+
 /**
  * Compute the gradient of a field defined over cells at a cell center
  * @param dm - The DM of the data stored in vec
@@ -128,6 +135,9 @@ PetscErrorCode DMPlexCellGradFromVertex(DM dm, const PetscInt c, Vec data, Petsc
  *    first-order accurate for triangular meshes. This should(?) be replaced with one that uses cell-center values later.
  */
 PetscErrorCode DMPlexCellGradFromCell(DM dm, const PetscInt c, Vec data, PetscInt fID, PetscInt offset, PetscScalar g[]);
+
+
+
 
 /**
  * Returns all DMPlex points at a given depth which are common between two DMPlex points. For example, if p1 is a cell and p2 is a vertex on the cell with depth=1 this will
