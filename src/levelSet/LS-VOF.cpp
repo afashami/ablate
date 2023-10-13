@@ -48,7 +48,7 @@ void VOF_1D(const PetscReal coords[], const PetscReal c[], PetscReal *vof, Petsc
 void VOF_2D_Tri(const PetscReal coords[], const PetscReal c[], PetscReal *vof, PetscReal *faceLength, PetscReal *cellArea) {
     if (vof || faceLength) {
         //    PetscReal p[3], x[6];
-        PetscInt l[3];
+        PetscInt l[3] = {0, 1, 2};
         PetscReal p[2];
         if (c[0] >= 0.0 && c[1] >= 0.0 && c[2] >= 0.0) {
             if (vof) *vof = 0.0;
