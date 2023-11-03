@@ -433,12 +433,6 @@ void ablate::levelSet::Utilities::VOF(std::shared_ptr<ablate::domain::SubDomain>
     DMPlexCellRestoreVertices(dm, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
 }
 
-  // Comment out the rest of the code so that we can focus on the cut-cells only
-
-  //    for the cut-cells won't be known yet.
-  // Now mark all of the necessary neighboring vertices. Note that this can't be put into the previous loop as all of the vertices
-
-
 
 void SaveVertexData(const char fname[255], const ablate::domain::Field *field, std::shared_ptr<ablate::domain::SubDomain> subDomain) {
 
@@ -476,1282 +470,6 @@ void SaveVertexData(const char fname[255], const ablate::domain::Field *field, s
   ablate::domain::RestoreRange(range);
 }
 
-
-
-
-  
-  // Handle the case where the signs are different
-  void checkSigns(PetscReal existingVal, PetscReal newVal) {
-	  if (existingVal != PETSC_MAX_REAL && ((existingVal > 0 && newVal < 0) || (existingVal < 0 && newVal > 0))) {
-		  PetscPrintf(PETSC_COMM_SELF, "Error: Different signs for shared vertex.\n");
-      }
-  }
-
-//// Compute the level-set field that corresponds to a given VOF field
-//// The steps are:
-////  1 - Determine the level-set field in cells containing a VOF value between 0 and 1
-////  2 - Mark the required number of vertices (based on the cells) next to the interface cells
-////  3 - Iterate over vertices EXCEPT for those with cut-cells until converged
-////  4 - We may want to look at a fourth step which improve the accuracy
-//void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *curvField) {
-
-  //// Note: Need to write a unit test where the vof and ls fields aren't in the same DM, e.g. one is a SOL vector and one is an AUX vector.
-
-  //DM vofDM = subDomain->GetFieldDM(*vofField);
-  //DM lsDM = subDomain->GetFieldDM(*lsField);
-  //DM normDM = subDomain->GetFieldDM(*normField);
-  //DM curvDM = subDomain->GetFieldDM(*curvField);
-  //const PetscInt vofID = vofField->id;
-  //const PetscInt lsID = lsField->id;
-  //const PetscInt normID = normField->id;
-  //const PetscInt curvID = curvField->id;
-  //Vec vofVec = subDomain->GetVec(*vofField);
-  //Vec lsVec = subDomain->GetVec(*lsField);
-  //Vec normVec = subDomain->GetVec(*normField);
-  //Vec curvVec = subDomain->GetVec(*curvField);
-  //Vec ls_oldVal;
-  //PetscScalar *lsArray;
-  //PetscScalar *normArray;
-  //PetscScalar *curvArray;
-  //const PetscScalar *vofArray;
-  //const PetscInt dim = subDomain->GetDimensions();   // VOF and LS subdomains must have the same dimension. Can't think of a reason they wouldn't.
-
-
-  //ablate::domain::Range cellRange, vertRange;
-  //subDomain->GetCellRange(nullptr, cellRange);
-  //subDomain->GetRange(nullptr, 0, vertRange);
-
-
-  //// Get the point->index mapping for cells
-  //ablate::domain::ReverseRange reverseVertRange = ablate::domain::ReverseRange(vertRange);
-  //ablate::domain::ReverseRange reverseCellRange = ablate::domain::ReverseRange(cellRange);
-
-  ////printf("%d\n", vertRange.end);
-  ////printf("%d\n", vertRange.start);
-  //PetscInt *vertMask, *cellMask;
-  //DMGetWorkArray(lsDM, vertRange.end - vertRange.start, MPIU_INT, &vertMask) >> ablate::utilities::PetscUtilities::checkError;
-  //DMGetWorkArray(vofDM, cellRange.end - cellRange.start, MPIU_INT, &cellMask) >> ablate::utilities::PetscUtilities::checkError;
-  ////printf("%p\n", (void *)vertMask);
-  ////vertMask[0]++;
-  ////printf("%x\n", vertMask[0]);
-  ////for (PetscInt i = 0; i < vertRange.end-vertRange.start; ++i) {
-	////vMask[i] = i;
-    ////printf("%d\n", vMask[i]);
-  ////}
-  ////printf("%d\n", vertMask[0]);
-  //vertMask -= vertRange.start; // offset so that we can use start->end
-  //cellMask -= cellRange.start; // offset so that we can use start->end
-  ////vMask -= vertRange.start; // offset so that we can use start->end
-  //for (PetscInt i = vertRange.start; i < vertRange.end; ++i) {
-    //vertMask[i] = -1; //  Ignore the vertex
-  //}
-  //for (PetscInt i = cellRange.start; i < cellRange.end; ++i) {
-    //cellMask[i] = -1; // Ignore the cell
-  //}
-  ////for (PetscInt i = vertRange.start; i < vertRange.end; ++i) {
-    ////vMask[i] = -1; // Ignore the vertex
-  ////}
-
-  //VecGetArray(lsVec, &lsArray) >> ablate::utilities::PetscUtilities::checkError;
-  //VecGetArray(normVec, &normArray) >> ablate::utilities::PetscUtilities::checkError;
-  //VecGetArray(curvVec, &curvArray) >> ablate::utilities::PetscUtilities::checkError;
-  ////PetscReal x0[dim];
-  //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-    //PetscInt vert = vertRange.GetPoint(v);
-    ////printf("%d, %d\n", v, vert);
-    //PetscScalar *val, *normval;
-    //xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-    ////DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-    ////*val = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0;
-    //*val = PETSC_MAX_REAL;
-    //xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-    //for (PetscInt k = 0; k < dim; ++k) {
-        //normval[k] = 1.0;
-    //}
-  //}
-  ////----------------test-------------//
-  ///*for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-    //PetscInt vert = vertRange.GetPoint(v);
-    ////printf("%d, %d\n", v, vert);
-    //PetscScalar *normval;
-    //xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-    //for (PetscInt k = 0; k < dim; ++k) {
-        //printf("normal value at vert %d is %f:\n", vert, normval[k]);
-    //}
-  //}*/
-  
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-    //PetscScalar *curvval;
-    //xDMPlexPointLocalRef(curvDM, cell, curvID, curvArray, &curvval) >> ablate::utilities::PetscUtilities::checkError;
-    //*curvval = 0.0;
-  //}
-  
-  ////----------------test-------------//
-  ///*for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-    //PetscScalar *curvval;
-    //xDMPlexPointLocalRef(curvDM, cell, curvID, curvArray, &curvval) >> ablate::utilities::PetscUtilities::checkError;
-    //printf("curve value at cell %d is %f:\n", cell, *curvval);
-  //}*/
- 
-  //VecGetArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError;
-  ////VecGetArrayRead(curvVec, &curvArray) >> ablate::utilities::PetscUtilities::checkError;
-  
-  //std::vector<PetscInt> lsIter(vertRange.end - vertRange.start, 0); // Declare an array for iterator
-  //PetscInt cutcellCount = 0;
-  
-  
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-    //PetscScalar *vofVal;
-    //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-    //// Only worry about cut-cells
-    //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-      //cellMask[c] = 0;  // Mark as a cut-cell
-      //cutcellCount +=1;
-
-      //// Unit normal estimate
-      //PetscReal n[3];
-      //n[0] = -(rbf->EvalDer(vofField, cell, 1, 0, 0));
-      //n[1] = -(rbf->EvalDer(vofField, cell, 0, 1, 0));
-      //n[2] = -(dim==3 ? rbf->EvalDer(vofField, cell, 0, 0, 1) : 0.0);
-      //ablate::utilities::MathUtilities::NormVector(dim, n);
-
-      //PetscInt nv, *verts;
-      //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //PetscReal *lsVertVals = NULL;
-      ////PetscReal vof_sum;
-      ////PetscReal alpha = 1.0;
-      //DMGetWorkArray(vofDM, nv, MPIU_REAL, &lsVertVals) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Level set values at the vertices
-      //ablate::levelSet::Utilities::VertexLevelSet_VOF(vofDM, cell, *vofVal, n, &lsVertVals);
-
-
-      //for (PetscInt v = 0; v < nv; ++v) {
-
-        //// Mark as a cut-cell vertex
-        //vertMask[reverseVertRange.GetIndex(verts[v])] = 0; // Mark vertex as associated with a cut-cell
-
-        //PetscScalar *lsVal;
-        //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-        
-        //PetscReal x0[dim];
-        //DMPlexComputeCellGeometryFVM(lsDM, verts[v], NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-        
-        ////-----------------------------------true value----------------------------------------//
-	    ///*if (*lsVal == PETSC_MAX_REAL) { 
-				//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
-			//} 
-			//else {
-				//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
-			//} */
-////-----------------------------------smallest value----------------------------------------//
-///*		if (PetscAbsReal(lsVertVals[v]) < PetscAbsScalar(*lsVal)){ 
-			//checkSigns(*lsVal, lsVertVals[v]);
-			//*lsVal = lsVertVals[v];
-        //}*/
-        
-////--------------------------approach 2-------Update values based on average between just two values//
-///*		if (*lsVal == PETSC_MAX_REAL) { 
-		    //*lsVal = lsVertVals[v]; 
-		//} 
-		//else {
-			//checkSigns(*lsVal, lsVertVals[v]);
-		    //*lsVal = (lsVertVals[v] + *lsVal) * 0.5; 
-		//}*/
-
-////--------------------------approach 3-------Update values based on average between  values//
-		//PetscInt vert_i = reverseVertRange.GetIndex(verts[v]);
-        //vert_i -= vertRange.start;
-				    
-		//if (lsIter[vert_i] == 0) {
-			//*lsVal = lsVertVals[v];
-			//lsIter[vert_i]++; 
-		//} 
-		//else {
-			//*lsVal = (lsVertVals[v] + *lsVal * lsIter[vert_i]) / (lsIter[vert_i] + 1);
-			//lsIter[vert_i]++;
-		//}
-	
-////--------------------------approach 4------wieghted average//	
-///*		if (*lsVal == PETSC_MAX_REAL) { 
-		    //*lsVal = lsVertVals[v];
-		    //vof_sum = *vofVal; 
-		//} 
-		//else {
-		    //*lsVal = alpha * (*vofVal * lsVertVals[v] + *lsVal * vof_sum) / (vof_sum + *vofVal); 
-		//}*/
-		
-////--------------------------approach 5------harmonic average//	
-///*		PetscInt vert_i = reverseVertRange.GetIndex(verts[v]);
-        //vert_i -= vertRange.start;
-        
-		//if (*lsVal == PETSC_MAX_REAL) { 
-			//*lsVal = lsVertVals[v];
-			//lsIter[vert_i]++; 
-		//}
-		//else {
-			//*lsVal = (lsIter[vert_i] + 1) / ((lsIter[vert_i] / *lsVal) + (1 / lsVertVals[v]));
-			//lsIter[vert_i]++;
-		//}*/
-		
-////--------------------------approach 5------geometric average//	
-///*		PetscInt vert_i = reverseVertRange.GetIndex(verts[v]);
-        //vert_i -= vertRange.start;
-        
-		//if (*lsVal == PETSC_MAX_REAL) { 
-			//*lsVal = lsVertVals[v];
-			//lsIter[vert_i]++; 
-		//}
-		//else {
-			//*lsVal = pow(pow(*lsVal, lsIter[vert_i]) * lsVertVals[v], (1 / (lsIter[vert_i] + 1)));
-			//lsIter[vert_i]++;
-		//}*/
-	
-      //}
-      
-      //DMRestoreWorkArray(vofDM, nv, MPIU_REAL, &lsVertVals) >> ablate::utilities::PetscUtilities::checkError;
-      //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-	//}
-  //} 
-  
-
-  //// define a new vector for storing old values of ls
-  //VecDuplicate(lsVec, &ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
-  //VecCopy(lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
-  //PetscReal maxError = 1.0;
-  //PetscInt i = 0;
-  
-  
-  //while ( maxError > 1e-6 ) {
-  ////for (PetscInt i = 0; i <= 8; ++i) {
-	////-------------------------------------recalculating the unit normal vector------------------------------------------------------//
-	  //PetscScalar normal[dim*cutcellCount];
-	  //PetscInt currentCutCell = 0;  // index to track which cut-cell we're working with
-	  
-	  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-	    //PetscInt cell = cellRange.GetPoint(c);
-	
-	    //PetscScalar *vofVal;
-	    //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-	
-	    //// Only worry about cut-cells
-	    //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-	
-	      //cellMask[c] = 0;  // Mark as a cut-cell
-	
-	      //// Calculate unit normal vector based on the updated level set values at the vertices
-	      //PetscScalar n_new[dim];
-		  //DMPlexCellGradFromVertex(lsDM, cell, lsVec, lsID, 0, n_new) >> ablate::utilities::PetscUtilities::checkError;
-		  //ablate::utilities::MathUtilities::NormVector(dim, n_new); 
-		  
-		  //// Copy the n_new values to the appropriate location in normal
-	      //std::copy(n_new, n_new + dim, &normal[currentCutCell*dim]);
-	      //currentCutCell++;
-		//}
-		
-	  //}
-	
-	////-------------------------------------new for loop for recalculating the level set------------------------------------------------------//
-	  //// Declare an array for iterator
-      //std::vector<PetscInt> lsIter(vertRange.end - vertRange.start, 0);
-	  //currentCutCell = 0;
-	  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-	    //PetscInt cell = cellRange.GetPoint(c);
-	
-	    //PetscScalar *vofVal;
-	    //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-	
-	    //// Only worry about cut-cells
-	    //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-	
-	      //cellMask[c] = 0;  // Mark as a cut-cell
-	
-	      //PetscInt nv, *verts;
-	      //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-	
-	      //PetscReal *lsVertVals = NULL;
-	      //DMGetWorkArray(vofDM, nv, MPIU_REAL, &lsVertVals) >> ablate::utilities::PetscUtilities::checkError;
-	
-	      //// Level set values at the vertices based on new unit normal vectors
-	      //PetscScalar n_new[dim];
-	      //std::copy(&normal[currentCutCell*dim], &normal[(currentCutCell+1)*dim], n_new);
-	      //ablate::levelSet::Utilities::VertexLevelSet_VOF(vofDM, cell, *vofVal, n_new, &lsVertVals);
-	      //currentCutCell +=1;
-	
-	      //for (PetscInt v = 0; v < nv; ++v) {
-	
-	        //// Mark as a cut-cell vertex
-	        //vertMask[reverseVertRange.GetIndex(verts[v])] = 0; // Mark vertex as associated with a cut-cell
-	
-	        //PetscScalar *lsVal;
-	        //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-	        
-	        //PetscReal x0[dim];
-            //DMPlexComputeCellGeometryFVM(lsDM, verts[v], NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	        
-        ////-----------------------------------true value----------------------------------------//
-			///*if (*lsVal == PETSC_MAX_REAL) { 
-				//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
-			//} 
-			//else {
-				//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
-			//} */
-	
-	////--------------------------approach 3-------Update values based on average between  values//
-			//PetscInt vert_i = reverseVertRange.GetIndex(verts[v]);
-	        //vert_i -= vertRange.start;
-					    
-			//if (lsIter[vert_i] == 0) {
-				//*lsVal = lsVertVals[v];
-				//lsIter[vert_i]++; 
-			//} 
-			//else {
-				//*lsVal = (lsVertVals[v] + *lsVal * lsIter[vert_i]) / (lsIter[vert_i] + 1);
-				//lsIter[vert_i]++;
-			//}
-		
-		
-	      //}
-	      
-	      //DMRestoreWorkArray(vofDM, nv, MPIU_REAL, &lsVertVals) >> ablate::utilities::PetscUtilities::checkError;
-	      //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-	    //}
-	  //}
-	  
-	  //Vec ls_diff;  // Temporary vector to store the difference
-	  //VecDuplicate(lsVec, &ls_diff) >> ablate::utilities::PetscUtilities::checkError;
-	  //VecWAXPY(ls_diff, -1.0, lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
-	  //VecNorm(ls_diff, NORM_INFINITY, &maxError) >> ablate::utilities::PetscUtilities::checkError;
-
-	  //VecDestroy(&ls_diff);  // Clean up the temporary vector
-      //printf("%d: %e\n", i, maxError);
-	  //VecCopy(lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
-	  //i++;
-	  	  
-  //}
-    ////-------------test---------------------//
-	///*for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-	    //PetscInt vert = vertRange.GetPoint(v);
-	    ////printf("%d, %d\n", v, vert);
-	    //PetscScalar *val;
-	    //xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-	    //if (*val == PETSC_MAX_REAL) {
-			//printf("at vert %d, value is max real\n", vert);
-		//} else {
-			//printf("vert is %d, and ls is %f\n", vert, *val);
-		//}
-    //}*/
-    
-    ////----------------test----------------//
-   ///*for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-	    //PetscInt vert = vertRange.GetPoint(v);
-	    //PetscScalar *normval;
-		//xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-		//for (PetscInt k = 0; k < dim; ++k) {
-			//printf("vert %d, norm value is %f\n", vert, normval[k]);
-		//}
-	//}*/
-	////-------------------------------------Calculating the curvature---------------------------------------------------------------------------------------------//
-    ///*for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-      ////printf("%d, %d\n", c, cell);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //PetscInt nv, *verts;
-        //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-        
-        ////test//
-        //PetscScalar *val;
-        ////end test
-        
-        //PetscScalar norm[dim];
-        //for (PetscInt v = 0; v < nv; ++v) {
-
-          //// Mark as a cut-cell vertex
-          //vertMask[reverseVertRange.GetIndex(verts[v])] = 0; // Mark vertex as associated with a cut-cell
-          
-          //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-          //DMPlexVertexGradFromVertex(lsDM, verts[v], lsVec, lsID, 0, norm);
-          //for (int k = 0; k < dim; ++k) {
-			//if (*val == PETSC_MAX_REAL) {
-				//printf("at vert %d, the ls is max real, and the norm is %f:\n", verts[v], norm[k]);
-			//} else {
-				//printf("at vert %d, the ls is %f, and the norm is %f:\n", verts[v], *val, norm[k]);
-		  //}
-	     //}
-          //ablate::utilities::MathUtilities::NormVector(dim, norm); 
-          
-          
-          
-          //PetscScalar *normval;
-          //xDMPlexPointLocalRef(normDM, verts[v], normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-          
-          //for (int k = 0; k < dim; ++k) {
-		    //normval[k] = norm[k];
-		  //}
-          
-	    //}
-      
-        //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //}
-    //}
-    
-    ////-------------test---------------------//
-    //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-	    //PetscInt vert = vertRange.GetPoint(v);
-	    //PetscScalar *normval;
-		//xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-		//for (PetscInt k = 0; k < dim; ++k) {
-			//printf("vert %d, norm value is %f\n", vert, normval[k]);
-		//}
-    //}
-	//for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-	    //PetscInt vert = vertRange.GetPoint(v);
-	    //PetscScalar *normval;
-		//xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-		//for (PetscInt k = 0; k < dim; ++k) {
-			//printf("vert %d, norm value is %f\n", vert, normval[k]);
-		//}
-		//for (PetscInt k = 0; k < dim; ++k) {
-			//if (normval[k] == 0.0) {
-			//printf("at the %d of vert %d, norm value is max real\n", k, vert);
-		//} else {
-			//printf("at the %d of vert %d, the norm is %f\n", k, vert, normval[k]);
-		  //}
-		//}*/
-    
-    
-       
-    ///*PetscInt *curvature;
-    //DMGetWorkArray(lsDM, cellRange.end - cellRange.start, MPIU_REAL, &curvature) >> ablate::utilities::PetscUtilities::checkError;
-    //curvature -= cellRange.start; // offset so that we can use start->end
-    //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-      
-      //PetscScalar *curvVal;
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //// Calculate unit normal vector based on the updated level set values at the vertices
-        //PetscScalar grad[dim];
-        //for(PetscInt k = 0; k < dim; ++k) {
-	      //DMPlexCellGradFromVertex(normDM, cell, normVec, normID, k, grad) >> ablate::utilities::PetscUtilities::checkError;
-          //xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	      //*curvVal = *curvVal + grad[k];
-	    //}
-	    
-      //}
-    //}*/
-        
-    ///*FILE* testFile = fopen("data.txt", "w");   
-    //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-      
-      //PetscScalar *curvVal;
-      ////PetscScalar test;
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //// Calculate unit normal vector based on the updated level set values at the vertices
-        ////test = (rbf->Curvature(vofField, cell));
-        ////printf("%d is %f\n", cell, test);
-        //PetscReal x0[dim];
-	    //DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-        //xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	    //*curvVal = (rbf->Curvature(vofField, cell));
-	    ////printf("%d is %f\n", cell, *curvVal);
-	    //for (PetscInt d = 0; d < dim; ++d) {
-		    //fprintf(testFile, "%+f\t", x0[d]);
-	    //}
-	  
-	    //fprintf(testFile, "%+f\n", *curvVal);
-	      
-	   //}
-	    
-     //}
-     //fclose(testFile);*/
-       
-       
-  ////----------------test-------------//
-    ///*for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-      //PetscScalar *curvval;
-      //xDMPlexPointLocalRef(curvDM, cell, curvID, curvArray, &curvval) >> ablate::utilities::PetscUtilities::checkError;
-      //printf("curve value at cell %d is %f:\n", cell, *curvval);
-    //}*/
-     
-        
-  //// Comment out the rest of the code so that we can focus on the cut-cells only
-
-  //// Now mark all of the necessary neighboring vertices. Note that this can't be put into the previous loop as all of the vertices
-  ////    for the cut-cells won't be known yet.
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cutCell = cellRange.GetPoint(c);
-
-    //// Only worry about cut-cells
-    //if ( cellMask[c]==0 ) {
-      //// Center of the cell
-      //PetscReal x0[3];
-      //DMPlexComputeCellGeometryFVM(vofDM, cutCell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Once the neightbor function for vertices is merged this will need to be moved over
-      //PetscInt nCells, *cells;
-      //DMPlexGetNeighbors(vofDM, cutCell, nLevels, -1.0, -1, PETSC_FALSE, PETSC_FALSE, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
-
-      //for (PetscInt i = 0; i < nCells; ++i) {
-
-        //PetscInt cellID = reverseCellRange.GetIndex(cells[i]);
-        //if (cellMask[cellID]<0) {
-          //cellMask[cellID] = 1; // Mark as a cell where cell-centered gradients are needed
-        //}
-
-        //PetscInt nv, *verts;
-        //DMPlexCellGetVertices(vofDM, cells[i], &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-        //PetscScalar *coords;
-        //DMPlexVertexGetCoordinates(vofDM, nv, verts, &coords) >> ablate::utilities::PetscUtilities::checkError;
-
-        //for (PetscInt v = 0; v < nv; ++v) {
-          //PetscInt id = reverseVertRange.GetIndex(verts[v]);
-          //if (vertMask[id]<0) {
-            //vertMask[id] = 1;
-          //}
-
-          //if (vertMask[id]==1) {
-
-            //// As an initial guess at the signed-distance function use the distance from the cut-cell center to this vertex
-            //PetscReal dist = 0.0;
-            //for (PetscInt d = 0; d < dim; ++d) {
-              //dist += PetscSqr(x0[d] - coords[v*dim + d]);
-            //}
-            //dist = PetscSqrtReal(dist);
-
-            //PetscScalar *lsVal;
-            //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-
-            //if (dist < PetscAbs(*lsVal)) {
-              //PetscScalar *vofVal;
-              //xDMPlexPointLocalRead(vofDM, cells[i], vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-              //PetscReal sgn = (*vofVal < 0.5 ? +1.0 : -1.0);
-              //*lsVal = sgn*dist;
-            //}
-          //}
-        //}
-
-        //DMPlexVertexRestoreCoordinates(vofDM, nv, verts, &coords) >> ablate::utilities::PetscUtilities::checkError;
-        //DMPlexCellRestoreVertices(vofDM, cells[i], &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-      //}
-
-      //PetscFree(cells) >> ablate::utilities::PetscUtilities::checkError;
-
-    //}
-  //}
-
-  //// Set the vertices too-far away as the largest possible value in the domain with the appropriate sign
-  //PetscReal gMin[3], gMax[3], maxDist = -1.0;
-  //DMGetBoundingBox(lsDM, gMin, gMax) >> ablate::utilities::PetscUtilities::checkError;
-
-  //for (PetscInt d = 0; d < dim; ++d) {
-    //maxDist = PetscMax(maxDist, gMax[d] - gMin[d]);
-  //}
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-    //// Only worry about cells to far away
-    //if ( cellMask[c]==-1 ) {
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-      //PetscReal sgn = PetscSignReal(0.5 - (*vofVal));
-
-      //PetscInt nv, *verts;
-      //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //for (PetscInt v = 0; v < nv; ++v) {
-        //PetscInt id = reverseVertRange.GetIndex(verts[v]);
-        //if (vertMask[id]<0) {
-          //PetscScalar *lsVal;
-          //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-          //*lsVal = sgn*maxDist;
-        //}
-      //}
-      //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-    //}
-  //}
-
- 
-  
-  ///*FILE* firstFile = fopen("curv.txt", "w");
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-    
-    //if (cellMask[c] == 0) {
- 
-		//PetscReal x0[dim];
-	    //DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-		//PetscScalar *curvVal;
-		    //// Calculate unit normal vector based on the updated level set values at the vertices
-		    ////test = (rbf->Curvature(vofField, cell));
-		    ////printf("%d is %f\n", cell, test);
-		//xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-		//*curvVal = (rbf->Curvature(vofField, cell));
-		//for (PetscInt d = 0; d < dim; ++d) {
-		  //fprintf(firstFile, "%+f\t", x0[d]);
-		//}
-		
-		//fprintf(firstFile, "%+f\n", *curvVal);
-		////printf("%d is %f\n", cell, *curvVal);    
-	//} 
-  //}
-  //fclose(firstFile);*/
-  
-  ////-------------------------------------Calculating the curvature---------------------------------------------------------------------------------------------//
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //PetscInt nv, *verts;
-        //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-        
-        ////test//
-        //PetscScalar *val;
-        ////end test
-        
-        //PetscScalar norm[dim];
-        //for (PetscInt v = 0; v < nv; ++v) {
-
-          //// Mark as a cut-cell vertex
-          //vertMask[reverseVertRange.GetIndex(verts[v])] = 0; // Mark vertex as associated with a cut-cell
-          
-          //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-          //DMPlexVertexGradFromVertex(lsDM, verts[v], lsVec, lsID, 0, norm);
-          //for (int k = 0; k < dim; ++k) {
-			//if (*val == PETSC_MAX_REAL) {
-				//printf("at vert %d, the ls is max real, and the norm is %f:\n", verts[v], norm[k]);
-			//} else {
-				//printf("at vert %d, the ls is %f, and the norm is %f:\n", verts[v], *val, norm[k]);
-		  //}
-	     //}
-          //ablate::utilities::MathUtilities::NormVector(dim, norm); 
-          
-          
-          
-          //PetscScalar *normval;
-          //xDMPlexPointLocalRef(normDM, verts[v], normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-          
-          //for (int k = 0; k < dim; ++k) {
-		    //normval[k] = norm[k];
-		  //}
-          
-	    //}
-      
-        //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //}
-    //}
-           
-    //PetscInt *curvature;
-    //DMGetWorkArray(lsDM, cellRange.end - cellRange.start, MPIU_REAL, &curvature) >> ablate::utilities::PetscUtilities::checkError;
-    //curvature -= cellRange.start; // offset so that we can use start->end
-    //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-      
-      //PetscScalar *curvVal;
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //// Calculate unit normal vector based on the updated level set values at the vertices
-        //PetscScalar grad[dim];
-        //for(PetscInt k = 0; k < dim; ++k) {
-	      //DMPlexCellGradFromVertex(normDM, cell, normVec, normID, k, grad) >> ablate::utilities::PetscUtilities::checkError;
-          //xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	      //*curvVal = *curvVal + grad[k];
-	    //}
-	    
-      //}
-    //}
-    
-  //FILE* firstFile = fopen("secondcurv.txt", "w");
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-	//PetscReal x0[dim];
-    //DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	//PetscScalar *curvVal;
-	//xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	//for (PetscInt d = 0; d < dim; ++d) {
-	  //fprintf(firstFile, "%+f\t", x0[d]);
-	  //printf("at x%d: %f: ", d, x0[d]);
-	//}
-	
-	//fprintf(firstFile, "%+f\n", *curvVal);
-	//printf("%+f\n", *curvVal);
-  //}
-  //fclose(firstFile);
-
-   //VecRestoreArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError;
-  //// Create the mapping between DMPlex cell numbering and location in the array storing cell-centered gradients
-  //PetscInt numCells = 0;
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //numCells += (cellMask[c]>-1);
-  //}
-
-  //PetscInt *cellArray, *indexArray;
-  //DMGetWorkArray(vofDM, numCells, MPIU_INT, &cellArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMGetWorkArray(vofDM, numCells, MPIU_INT, &indexArray) >> ablate::utilities::PetscUtilities::checkError;
-
-
-  //i = 0;
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //if (cellMask[c]>-1) {
-      //cellArray[i] = cellRange.GetPoint(c);
-      //indexArray[i] = i;
-      //++i;
-
-    //}
-  //}
-
-  //cellMask += cellRange.start;  // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
-  //DMRestoreWorkArray(vofDM, cellRange.end - cellRange.start, MPIU_INT, &cellMask) >> ablate::utilities::PetscUtilities::checkError;
-  //subDomain->RestoreRange(cellRange);
-
-  //AO cellToIndex;
-  //AOCreateMapping(PETSC_COMM_SELF, numCells, cellArray, indexArray, &cellToIndex) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscScalar *cellGradArray;
-  //DMGetWorkArray(vofDM, dim*numCells, MPIU_SCALAR, &cellGradArray) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscReal h;
-  //DMPlexGetMinRadius(vofDM, &h) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscReal diff = 1.0;
-  //PetscInt it = 0;
-  //while (diff>1e-2 && it<77e10) {
-    //++it;
-    //for (PetscInt i = 0; i < numCells; ++i) {
-      //PetscInt cell = cellArray[i];
-
-      //ablate::levelSet::Utilities::CellValGrad(lsDM, lsID, cell, lsVec, nullptr, &(cellGradArray[i*dim]));
-
-    //}
-
-    //diff = 0.0;
-
-    //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-      //if (vertMask[v]==1) {
-        //PetscInt vert = vertRange.GetPoint(v);
-        //PetscReal g[dim];
-        //PetscReal *phi;
-
-        //xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &phi) >> ablate::utilities::PetscUtilities::checkError;
-
-        //DMPlexVertexGradFromVertex(lsDM, vert, lsVec, lsID, 0, g) >> ablate::utilities::PetscUtilities::checkError;
-
-        //VertexUpwindGrad(lsDM, cellGradArray, cellToIndex, vert, PetscSignReal(*phi), g);
-
-        //PetscReal mag = ablate::utilities::MathUtilities::MagVector(dim, g) - 1.0;
-
-        //PetscReal s = PetscSignReal(*phi);
-
-        //*phi -= h*s*mag;
-
-        //mag = PetscAbsReal(mag);
-        //diff = PetscMax(diff, mag);
-
-      //}
-    //}
-    ////printf("%e\n", diff);
-  //}
-
-  //DMRestoreWorkArray(vofDM, dim*numCells, MPIU_SCALAR, &cellGradArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMRestoreWorkArray(vofDM, numCells, MPIU_INT, &cellArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMRestoreWorkArray(vofDM, numCells, MPIU_INT, &indexArray) >> ablate::utilities::PetscUtilities::checkError;
-  //AODestroy(&cellToIndex) >> ablate::utilities::PetscUtilities::checkError;
-  
-  ///*FILE* outputFile = fopen("levelset.txt", "w");
-  //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    //PetscInt vert = vertRange.GetPoint(v);
-        
-	//PetscReal x0[dim];
-	//DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	//PetscScalar *lsval;
-	//xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	//for (PetscInt d = 0; d < dim; ++d) {
-	  //fprintf(outputFile, "%+f\t", x0[d]);
-	//}
-	
-	//fprintf(outputFile, "%+f\n", *lsval);
-
-  //}
-
-  //fclose(outputFile);*/
-  
-  //vertMask += vertRange.start; // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
-  //DMRestoreWorkArray(lsDM, vertRange.end - vertRange.start, MPIU_INT, &vertMask) >> ablate::utilities::PetscUtilities::checkError;
-  //subDomain->RestoreRange(vertRange);
-
-
-//}
-
-//// Compute the level-set field that corresponds to a given VOF field
-//// The steps are:
-////  1 - Determine the level-set field in cells containing a VOF value between 0 and 1
-////  2 - Mark the required number of vertices (based on the cells) next to the interface cells
-////  3 - Iterate over vertices EXCEPT for those with cut-cells until converged
-////  4 - We may want to look at a fourth step which improve the accuracy
-//void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *curvField) {
-
-  //// Note: Need to write a unit test where the vof and ls fields aren't in the same DM, e.g. one is a SOL vector and one is an AUX vector.
-
-  //DM vofDM = subDomain->GetFieldDM(*vofField);
-  //DM lsDM = subDomain->GetFieldDM(*lsField);
-  //DM normDM = subDomain->GetFieldDM(*normField);
-  //DM curvDM = subDomain->GetFieldDM(*curvField);
-  //const PetscInt vofID = vofField->id;
-  //const PetscInt lsID = lsField->id;
-  //const PetscInt normID = normField->id;
-  //const PetscInt curvID = curvField->id;
-  //Vec vofVec = subDomain->GetVec(*vofField);
-  //Vec lsVec = subDomain->GetVec(*lsField);
-  //Vec normVec = subDomain->GetVec(*normField);
-  //Vec curvVec = subDomain->GetVec(*curvField);
-  //PetscScalar *lsArray;
-  //PetscScalar *normArray;
-  //PetscScalar *curvArray;
-  //const PetscScalar *vofArray;
-  //const PetscInt dim = subDomain->GetDimensions();   // VOF and LS subdomains must have the same dimension. Can't think of a reason they wouldn't.
-
-
-  //ablate::domain::Range cellRange, vertRange;
-  //subDomain->GetCellRange(nullptr, cellRange);
-  //subDomain->GetRange(nullptr, 0, vertRange);
-
-
-  //// Get the point->index mapping for cells
-  //ablate::domain::ReverseRange reverseVertRange = ablate::domain::ReverseRange(vertRange);
-  //ablate::domain::ReverseRange reverseCellRange = ablate::domain::ReverseRange(cellRange);
-
-  //PetscInt *vertMask, *cellMask;
-  //DMGetWorkArray(lsDM, vertRange.end - vertRange.start, MPIU_INT, &vertMask) >> ablate::utilities::PetscUtilities::checkError;
-  //DMGetWorkArray(vofDM, cellRange.end - cellRange.start, MPIU_INT, &cellMask) >> ablate::utilities::PetscUtilities::checkError;
-
-  //vertMask -= vertRange.start; // offset so that we can use start->end
-  //cellMask -= cellRange.start; // offset so that we can use start->end
-
-  //for (PetscInt i = vertRange.start; i < vertRange.end; ++i) {
-    //vertMask[i] = -1; //  Ignore the vertex
-  //}
-  //for (PetscInt i = cellRange.start; i < cellRange.end; ++i) {
-    //cellMask[i] = -1; // Ignore the cell
-  //}
-
-  //VecGetArray(lsVec, &lsArray) >> ablate::utilities::PetscUtilities::checkError;
-  //VecGetArray(normVec, &normArray) >> ablate::utilities::PetscUtilities::checkError;
-  //VecGetArray(curvVec, &curvArray) >> ablate::utilities::PetscUtilities::checkError;
-  //PetscReal x0[dim];
-  //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-    //PetscInt vert = vertRange.GetPoint(v);
-    //PetscScalar *val, *normval;
-    //xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-    //DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-    //*val = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0;
-    ////*val = PETSC_MAX_REAL;
-    //xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-    //for (PetscInt k = 0; k < dim; ++k) {
-        //normval[k] = 1.0;
-    //}
-  //}
-  
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-    //PetscScalar *curvval;
-    //xDMPlexPointLocalRef(curvDM, cell, curvID, curvArray, &curvval) >> ablate::utilities::PetscUtilities::checkError;
-    //*curvval = 0.0;
-  //}
- 
-  //VecGetArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError;
-  
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-    //PetscScalar *vofVal;
-    //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-    //// Only worry about cut-cells
-    //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-      //cellMask[c] = 0;  // Mark as a cut-cell
-	//}
-  //} 
- ///*
-  //// Comment out the rest of the code so that we can focus on the cut-cells only
-
-  //// Now mark all of the necessary neighboring vertices. Note that this can't be put into the previous loop as all of the vertices
-  ////    for the cut-cells won't be known yet.
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cutCell = cellRange.GetPoint(c);
-
-    //// Only worry about cut-cells
-    //if ( cellMask[c]==0 ) {
-      //// Center of the cell
-      //PetscReal x0[3];
-      //DMPlexComputeCellGeometryFVM(vofDM, cutCell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Once the neightbor function for vertices is merged this will need to be moved over
-      //PetscInt nCells, *cells;
-      //DMPlexGetNeighbors(vofDM, cutCell, nLevels, -1.0, -1, PETSC_FALSE, PETSC_FALSE, &nCells, &cells) >> ablate::utilities::PetscUtilities::checkError;
-
-      //for (PetscInt i = 0; i < nCells; ++i) {
-
-        //PetscInt cellID = reverseCellRange.GetIndex(cells[i]);
-        //if (cellMask[cellID]<0) {
-          //cellMask[cellID] = 1; // Mark as a cell where cell-centered gradients are needed
-        //}
-
-        //PetscInt nv, *verts;
-        //DMPlexCellGetVertices(vofDM, cells[i], &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-        //PetscScalar *coords;
-        //DMPlexVertexGetCoordinates(vofDM, nv, verts, &coords) >> ablate::utilities::PetscUtilities::checkError;
-
-        //for (PetscInt v = 0; v < nv; ++v) {
-          //PetscInt id = reverseVertRange.GetIndex(verts[v]);
-          //if (vertMask[id]<0) {
-            //vertMask[id] = 1;
-          //}
-
-          //if (vertMask[id]==1) {
-
-            //// As an initial guess at the signed-distance function use the distance from the cut-cell center to this vertex
-            //PetscReal dist = 0.0;
-            //for (PetscInt d = 0; d < dim; ++d) {
-              //dist += PetscSqr(x0[d] - coords[v*dim + d]);
-            //}
-            //dist = PetscSqrtReal(dist);
-
-            //PetscScalar *lsVal;
-            //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-
-            //if (dist < PetscAbs(*lsVal)) {
-              //PetscScalar *vofVal;
-              //xDMPlexPointLocalRead(vofDM, cells[i], vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-              //PetscReal sgn = (*vofVal < 0.5 ? +1.0 : -1.0);
-              //*lsVal = sgn*dist;
-            //}
-          //}
-        //}
-
-        //DMPlexVertexRestoreCoordinates(vofDM, nv, verts, &coords) >> ablate::utilities::PetscUtilities::checkError;
-        //DMPlexCellRestoreVertices(vofDM, cells[i], &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-      //}
-
-      //PetscFree(cells) >> ablate::utilities::PetscUtilities::checkError;
-
-    //}
-  //}
-
-  //// Set the vertices too-far away as the largest possible value in the domain with the appropriate sign
-  //PetscReal gMin[3], gMax[3], maxDist = -1.0;
-  //DMGetBoundingBox(lsDM, gMin, gMax) >> ablate::utilities::PetscUtilities::checkError;
-
-  //for (PetscInt d = 0; d < dim; ++d) {
-    //maxDist = PetscMax(maxDist, gMax[d] - gMin[d]);
-  //}
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-    //// Only worry about cells to far away
-    //if ( cellMask[c]==-1 ) {
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-      //PetscReal sgn = PetscSignReal(0.5 - (*vofVal));
-
-      //PetscInt nv, *verts;
-      //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //for (PetscInt v = 0; v < nv; ++v) {
-        //PetscInt id = reverseVertRange.GetIndex(verts[v]);
-        //if (vertMask[id]<0) {
-          //PetscScalar *lsVal;
-          //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
-          //*lsVal = sgn*maxDist;
-        //}
-      //}
-      //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-    //}
-  //}
-  //*/
-  ///*
-  ////-------------------------------------Calculating the curvature---------------------------------------------------------------------------------------------//
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //PetscInt nv, *verts;
-        //DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-        
-        ////test//
-        //PetscScalar *val;
-        ////end test
-        
-        //PetscScalar norm[dim];
-        //for (PetscInt v = 0; v < nv; ++v) {
-
-          //// Mark as a cut-cell vertex
-          //vertMask[reverseVertRange.GetIndex(verts[v])] = 0; // Mark vertex as associated with a cut-cell
-          
-          //xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-          //DMPlexVertexGradFromVertex(lsDM, verts[v], lsVec, lsID, 0, norm);
-          //for (int k = 0; k < dim; ++k) {
-			//if (*val == PETSC_MAX_REAL) {
-				//printf("at vert %d, the ls is max real, and the norm is %f:\n", verts[v], norm[k]);
-			//} else {
-				//printf("at vert %d, the ls is %f, and the norm is %f:\n", verts[v], *val, norm[k]);
-		  //}
-	     //}
-          //ablate::utilities::MathUtilities::NormVector(dim, norm); 
-          
-          
-          
-          //PetscScalar *normval;
-          //xDMPlexPointLocalRef(normDM, verts[v], normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
-          
-          //for (int k = 0; k < dim; ++k) {
-		    //normval[k] = norm[k];
-		  //}
-          
-	    //}
-      
-        //DMPlexCellRestoreVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-
-      //}
-    //}
-       
-    //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-      //PetscInt cell = cellRange.GetPoint(c);
-
-      //PetscScalar *vofVal;
-      //xDMPlexPointLocalRead(vofDM, cell, vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
-      
-      //PetscScalar *curvVal;
-      //// Only worry about cut-cells
-      //if ( ((*vofVal) > ablate::utilities::Constants::small) && ((*vofVal) < (1.0 - ablate::utilities::Constants::small)) ) {
-
-        //cellMask[c] = 0;  // Mark as a cut-cell
-
-        //// Calculate unit normal vector based on the updated level set values at the vertices
-        //PetscScalar grad[dim];
-        //for(PetscInt k = 0; k < dim; ++k) {
-	      //DMPlexCellGradFromVertex(normDM, cell, normVec, normID, k, grad) >> ablate::utilities::PetscUtilities::checkError;
-          //xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	      //*curvVal = *curvVal + grad[k];
-	    //}
-	    
-      //}
-  //}
-    
-  //FILE* secFile = fopen("secondcurv.txt", "w");
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-
-	//PetscReal x0[dim];
-    //DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	//PetscScalar *curvVal;
-	//xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	//for (PetscInt d = 0; d < dim; ++d) {
-	  //fprintf(secFile, "%+f\t", x0[d]);
-	  //printf("at x%d: %f: ", d, x0[d]);
-	//}
-	
-	//fprintf(secFile, "%+f\n", *curvVal);
-	//printf("%+f\n", *curvVal);
-  //}
-  //fclose(secFile); */
-
-   
-  //// Create the mapping between DMPlex cell numbering and location in the array storing cell-centered gradients
-  //PetscInt numCells = 0;
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //numCells += (cellMask[c]>-1);
-  //}
-
-  //PetscInt *cellArray, *indexArray;
-  //DMGetWorkArray(vofDM, numCells, MPIU_INT, &cellArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMGetWorkArray(vofDM, numCells, MPIU_INT, &indexArray) >> ablate::utilities::PetscUtilities::checkError;
-
-
-  //PetscInt i = 0;
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //if (cellMask[c]>-1) {
-      //cellArray[i] = cellRange.GetPoint(c);
-      //indexArray[i] = i;
-      //++i;
-
-    //}
-  //}
-
-
-
-  //AO cellToIndex;
-  //AOCreateMapping(PETSC_COMM_SELF, numCells, cellArray, indexArray, &cellToIndex) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscScalar *cellGradArray;
-  //DMGetWorkArray(vofDM, dim*numCells, MPIU_SCALAR, &cellGradArray) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscReal h;
-  //DMPlexGetMinRadius(vofDM, &h) >> ablate::utilities::PetscUtilities::checkError;
-
-  //PetscReal diff = 1.0;
-  //PetscInt it = 0;
-  //while (diff>1e-2 && it<77e10) {
-    //++it;
-    //for (PetscInt i = 0; i < numCells; ++i) {
-      //PetscInt cell = cellArray[i];
-
-      //ablate::levelSet::Utilities::CellValGrad(lsDM, lsID, cell, lsVec, nullptr, &(cellGradArray[i*dim]));
-
-    //}
-
-    //diff = 0.0;
-
-    //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-      //if (vertMask[v]==1) {
-        //PetscInt vert = vertRange.GetPoint(v);
-        //PetscReal g[dim];
-        //PetscReal *phi;
-
-        //xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &phi) >> ablate::utilities::PetscUtilities::checkError;
-
-        //DMPlexVertexGradFromVertex(lsDM, vert, lsVec, lsID, 0, g) >> ablate::utilities::PetscUtilities::checkError;
-
-        //VertexUpwindGrad(lsDM, cellGradArray, cellToIndex, vert, PetscSignReal(*phi), g);
-
-        //PetscReal mag = ablate::utilities::MathUtilities::MagVector(dim, g) - 1.0;
-
-        //PetscReal s = PetscSignReal(*phi);
-
-        //*phi -= h*s*mag;
-
-        //mag = PetscAbsReal(mag);
-        //diff = PetscMax(diff, mag);
-
-      //}
-    //}
-    ////printf("%e\n", diff);
-  //}
-
-  //DMRestoreWorkArray(vofDM, dim*numCells, MPIU_SCALAR, &cellGradArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMRestoreWorkArray(vofDM, numCells, MPIU_INT, &cellArray) >> ablate::utilities::PetscUtilities::checkError;
-  //DMRestoreWorkArray(vofDM, numCells, MPIU_INT, &indexArray) >> ablate::utilities::PetscUtilities::checkError;
-  //AODestroy(&cellToIndex) >> ablate::utilities::PetscUtilities::checkError;
-  
-  //FILE* outputFile = fopen("levelset.txt", "w");
-  //for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    //PetscInt vert = vertRange.GetPoint(v);
-        
-	//PetscReal x0[dim];
-	//DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	//PetscScalar *lsval;
-	//xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	//for (PetscInt d = 0; d < dim; ++d) {
-	  //fprintf(outputFile, "%+f\t", x0[d]);
-	//}
-	
-	//fprintf(outputFile, "%+f\n", *lsval);
-
-  //}
-
-  //fclose(outputFile);
-  
-  //FILE* firstFile = fopen("curv.txt", "w");
-  //for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    //PetscInt cell = cellRange.GetPoint(c);
-    
-    //if (cellMask[c] == 0) {
- 
-		//PetscReal x0[dim];
-	    //DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-		//PetscScalar *curvVal;
-		    //// Calculate unit normal vector based on the updated level set values at the vertices
-		    ////test = (rbf->Curvature(vofField, cell));
-		    ////printf("%d is %f\n", cell, test);
-		//xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-		//*curvVal = (rbf->Curvature(vofField, cell));
-		//for (PetscInt d = 0; d < dim; ++d) {
-		  //fprintf(firstFile, "%+f\t", x0[d]);
-		//}
-		
-		//fprintf(firstFile, "%+f\n", *curvVal);
-		////printf("%d is %f\n", cell, *curvVal);    
-	//} 
-  //}
-  //fclose(firstFile);
-  
-  //cellMask += cellRange.start;  // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
-  //DMRestoreWorkArray(vofDM, cellRange.end - cellRange.start, MPIU_INT, &cellMask) >> ablate::utilities::PetscUtilities::checkError;
-  //subDomain->RestoreRange(cellRange);
-  //VecRestoreArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError; 
-  
-  //vertMask += vertRange.start; // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
-  //DMRestoreWorkArray(lsDM, vertRange.end - vertRange.start, MPIU_INT, &vertMask) >> ablate::utilities::PetscUtilities::checkError;
-  //subDomain->RestoreRange(vertRange);
-
-
-//}
-
-
 // Compute the level-set field that corresponds to a given VOF field
 // The steps are:
 //  1 - Determine the level-set field in cells containing a VOF value between 0 and 1
@@ -1765,7 +483,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
   DM lsDM = subDomain->GetFieldDM(*lsField);
   DM normDM = subDomain->GetFieldDM(*normField);
   DM curvDM = subDomain->GetFieldDM(*curvField);
-  DM iterDM = subDomain->GetFieldDM(*iterField);
+  DM iterDM = subDomain->GetFieldDM(*iterField); // the iterField is the field of iterator for each vertex in order to know how many times we assign LS value to a vertex, especially for shared vertices in cut-cells (except the time for field initialization) 
   const PetscInt vofID = vofField->id;
   const PetscInt lsID = lsField->id;
   const PetscInt normID = normField->id;
@@ -1776,12 +494,11 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
   Vec normVec = subDomain->GetVec(*normField);
   Vec curvVec = subDomain->GetVec(*curvField);
   Vec iterVec = subDomain->GetVec(*iterField);
-  Vec ls_oldVal;
+  const PetscScalar *vofArray;
   PetscScalar *lsArray;
-  PetscScalar *iterArray;
   PetscScalar *normArray;
   PetscScalar *curvArray;
-  const PetscScalar *vofArray;
+  PetscScalar *iterArray;
   const PetscInt dim = subDomain->GetDimensions();   // VOF and LS subdomains must have the same dimension. Can't think of a reason they wouldn't.
 
   ablate::domain::Range cellRange, vertRange;
@@ -1806,19 +523,19 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
   }
   
   VecGetArray(lsVec, &lsArray) >> ablate::utilities::PetscUtilities::checkError;
-  VecGetArray(iterVec, &iterArray) >> ablate::utilities::PetscUtilities::checkError;
   VecGetArray(normVec, &normArray) >> ablate::utilities::PetscUtilities::checkError;
   VecGetArray(curvVec, &curvArray) >> ablate::utilities::PetscUtilities::checkError;
+  VecGetArray(iterVec, &iterArray) >> ablate::utilities::PetscUtilities::checkError;
   
-  //PetscReal x0[dim];
+  //PetscReal x0[dim]; 
   for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
     PetscInt vert = vertRange.GetPoint(v);
     PetscScalar *val, *normval, *iter;
     xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
-    //PetscReal x0[dim];
-    //DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
+    //---------------------Initialize the value of LS to true values of LS for all the vertices (in case of testing true values for curvature)---------------------//
+    //DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError; 
     //*val = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0;
-    *val = 0.0;
+    *val = 0.0; // Initialize the value of LS to zero for all the vertices
     xDMPlexPointLocalRef(iterDM, vert, iterID, iterArray, &iter) >> ablate::utilities::PetscUtilities::checkError;
     *iter = 0.0;
     xDMPlexPointLocalRef(normDM, vert, normID, normArray, &normval) >> ablate::utilities::PetscUtilities::checkError;
@@ -1833,33 +550,10 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
     xDMPlexPointLocalRef(curvDM, cell, curvID, curvArray, &curvval) >> ablate::utilities::PetscUtilities::checkError;
     *curvval = 0.0;
   }
-  /*
-  //------------test-----------------//
-  FILE* outputFile = fopen("levelset.txt", "w");
-  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    PetscInt vert = vertRange.GetPoint(v);
-        
-	PetscReal x0[dim];
-	DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	PetscScalar *lsval;
-	xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	for (PetscInt d = 0; d < dim; ++d) {
-	  fprintf(outputFile, "%+f\t", x0[d]);
-	}
-	
-	fprintf(outputFile, "%+f\n", *lsval);
-
-  }
-  fclose(outputFile);  */
   
- 
   VecGetArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError;
   
-  //std::vector<PetscInt> lsIter(vertRange.end - vertRange.start, 0); // Declare an array for iterator
-  PetscInt cutcellCount = 0;
-  
+  PetscInt cutcellCount = 0; // Number of Cut-cells
   
   for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
     PetscInt cell = cellRange.GetPoint(c);
@@ -1877,7 +571,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
       PetscReal n[3];
       n[0] = -(rbf->EvalDer(vofField, cell, 1, 0, 0));
       n[1] = -(rbf->EvalDer(vofField, cell, 0, 1, 0));
-      n[2] = -(dim==3 ? rbf->EvalDer(vofField, cell, 0, 0, 1) : 0.0);
+      n[2] = -(dim==3 ? rbf->EvalDer(vofField, cell, 0, 0, 1) : 0.0); // Using cell-based RBF here
       ablate::utilities::MathUtilities::NormVector(dim, n);
 
       PetscInt nv, *verts;
@@ -1888,7 +582,6 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 
       // Level set values at the vertices
       ablate::levelSet::Utilities::VertexLevelSet_VOF(vofDM, cell, *vofVal, n, &lsVertVals);
-
 
       for (PetscInt v = 0; v < nv; ++v) {
 
@@ -1904,12 +597,11 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
         PetscReal x0[dim];
         DMPlexComputeCellGeometryFVM(lsDM, verts[v], NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
         
-        //-----------------------------------true value----------------------------------------//
+//---------------------comment out this part in case of testing true LS values for calculation---------------------//
 		
-		//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
-			
+		//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 		
 
-//--------------------------approach 3-------Update values based on average between  values//				    
+//---------------------Update values based on average between different LS values for shared vertices---------------------//				    
 		if (*iter == 0.0) {
 			*lsVal = lsVertVals[v]; 
 			*iter = *iter + 1.0;
@@ -1926,40 +618,18 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 
 	}
   } 
-  /*
-  //------------test-----------------//
-  FILE* outputFile = fopen("levelset.txt", "w");
-  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    PetscInt vert = vertRange.GetPoint(v);
-        
-	PetscReal x0[dim];
-	DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	PetscScalar *lsval;
-	xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	for (PetscInt d = 0; d < dim; ++d) {
-	  fprintf(outputFile, "%+f\t", x0[d]);
-	}
-	
-	fprintf(outputFile, "%+f\n", *lsval);
-
-  }
-  fclose(outputFile); */
   
-  
-  // Define a new vector for storing old values of ls
+//---------------------Recalculating the LS values for cut-cells based on new values of unit normal vector---------------------//  
+  Vec ls_oldVal; // Define a new vector for storing old values of LS
   VecDuplicate(lsVec, &ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
   VecCopy(lsVec, ls_oldVal) >> ablate::utilities::PetscUtilities::checkError;
   PetscReal maxError = 1.0;
   PetscInt i = 0;
-  //std::vector<PetscInt> lsIters(vertRange.end - vertRange.start, 0); // Declare an array for iterator
   
   while ( maxError > 1e-6 ) {
-  //for (PetscInt i = 0; i <= 8; ++i) {
-	//-------------------------------------recalculating the unit normal vector------------------------------------------------------//
+	//---------------------recalculating the unit normal vector---------------------//
 	  PetscScalar normal[dim*cutcellCount];
-	  PetscInt currentCutCell = 0;  // index to track which cut-cell we're working with
+	  PetscInt currentCutCell = 0; // index to track which cut-cell we're working with
 	  
 	  for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
 	    PetscInt cell = cellRange.GetPoint(c);
@@ -1967,7 +637,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 	    // Only worry about cut-cells
 	    if (cellMask[c] == 0) {
 	
-	      // Calculate unit normal vector based on the updated level set values at the vertices
+	      // Calculate unit normal vector based on the updated LS values at the vertices
 	      PetscScalar n_new[dim] = {0.0};
 		  DMPlexCellGradFromVertex(lsDM, cell, lsVec, lsID, 0, n_new) >> ablate::utilities::PetscUtilities::checkError;
 		  ablate::utilities::MathUtilities::NormVector(dim, n_new); 
@@ -1979,7 +649,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 		
 	  }
 	
-	//-------------------------------------new for loop for recalculating the level set------------------------------------------------------//
+	//---------------------new for loop for recalculating the LS based on the new unit normal vectors---------------------//
 	  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
 	    PetscInt vert = vertRange.GetPoint(v);
 	    PetscScalar *iter;
@@ -2024,12 +694,11 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
            
            
 	        
-        //-----------------------------------true value----------------------------------------//
+//---------------------comment out this part in case of testing true LS values for calculation---------------------//
 
 			//*lsVal = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0; 
 			
-	
-	//--------------------------approach 3-------Update values based on average between  values//
+//---------------------Update values based on average between different LS values for shared vertices---------------------//
 			if (*iter == 0.0) {
 				*lsVal = lsVertVals[v]; 
 				*iter = *iter + 1.0;
@@ -2038,8 +707,6 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 				*lsVal = (lsVertVals[v] + *lsVal * *iter) / (*iter + 1.0);
 				*iter = *iter + 1.0;
 			}
-		
-		
 		
 	      }
 	      
@@ -2059,29 +726,9 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 	  i++;
 	  	  
   }
+//---------------------End of recalculating the LS values for cut-cells based on new values of unit normal vector---------------------// 
   
- /*
- //------------test-----------------//
-  FILE* outputFile = fopen("levelset.txt", "w");
-  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    PetscInt vert = vertRange.GetPoint(v);
-        
-	PetscReal x0[dim];
-	DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	PetscScalar *lsval;
-	xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	for (PetscInt d = 0; d < dim; ++d) {
-	  fprintf(outputFile, "%+f\t", x0[d]);
-	}
-	
-	fprintf(outputFile, "%+f\n", *lsval);
-
-  }
-  fclose(outputFile); */
-       
-    
+      
   // Comment out the rest of the code so that we can focus on the cut-cells only
 
   // Now mark all of the necessary neighboring vertices. Note that this can't be put into the previous loop as all of the vertices
@@ -2130,7 +777,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
             PetscScalar *lsVal;
             xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &lsVal) >> ablate::utilities::PetscUtilities::checkError;
 
-            if (dist > PetscAbs(*lsVal)) {
+            if (dist > PetscAbs(*lsVal)) { // The initial values of LS for all the vertices has been set to zero, so it should be dist > PetscAbs(*lsVal)
               PetscScalar *vofVal;
               xDMPlexPointLocalRead(vofDM, cells[i], vofID, vofArray, &vofVal) >> ablate::utilities::PetscUtilities::checkError;
               PetscReal sgn = (*vofVal < 0.5 ? +1.0 : -1.0);
@@ -2255,8 +902,8 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
   DMRestoreWorkArray(vofDM, numCells, MPIU_INT, &indexArray) >> ablate::utilities::PetscUtilities::checkError;
   AODestroy(&cellToIndex) >> ablate::utilities::PetscUtilities::checkError; 
   
-  /*
-  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
+//---------------------comment out this part in case of testing true LS values for calculation---------------------//
+/*  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
     PetscInt vert = vertRange.GetPoint(v);
     PetscScalar *val;
     xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
@@ -2265,7 +912,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
     *val = sqrt(x0[0]*x0[0] + x0[1]*x0[1]) - 1.0;
   }  */
 
-//-------------------------------------Calculating the curvature---------------------------------------------------------------------------------------------//
+//---------------------Calculating the curvature based on DMPlexVertexGradFromVertex and DMPlexCellGradFromVertex (first method)---------------------//
   for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
       PetscInt cell = cellRange.GetPoint(c);
 
@@ -2275,9 +922,7 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
         PetscInt nv, *verts;
         DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
         
-        //test//
         PetscScalar *val;
-        //end test
         
         PetscScalar norm[dim] = {0.0};
         for (PetscInt v = 0; v < nv; ++v) {
@@ -2287,13 +932,6 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
           
           xDMPlexPointLocalRef(lsDM, verts[v], lsID, lsArray, &val) >> ablate::utilities::PetscUtilities::checkError;
           DMPlexVertexGradFromVertex(lsDM, verts[v], lsVec, lsID, 0, norm);
-          //for (int k = 0; k < dim; ++k) {
-			//if (*val == PETSC_MAX_REAL) {
-				//printf("at vert %d, the ls is max real, and the norm is %f:\n", verts[v], norm[k]);
-			//} else {
-				//printf("at vert %d, the ls is %f, and the norm is %f:\n", verts[v], *val, norm[k]);
-		  //}
-	     //}
           ablate::utilities::MathUtilities::NormVector(dim, norm); 
           
           
@@ -2328,47 +966,8 @@ void ablate::levelSet::Utilities::Reinitialize(std::shared_ptr<ablate::domain::r
 	    
       } 
     }
-
-  //VecRestoreArrayRead(vofVec, &vofArray) >> ablate::utilities::PetscUtilities::checkError;
-  //---------------------------------evaluate the values of a specific location---------------//
-for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
-    PetscInt cell = cellRange.GetPoint(c);
-
-	PetscReal x0[dim];
-    DMPlexComputeCellGeometryFVM(curvDM, cell, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	PetscScalar *curvVal;
-	xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
-	if (*curvVal < 0.85 && *curvVal > 0.0) {
-		PetscInt nv, *verts;
-        DMPlexCellGetVertices(vofDM, cell, &nv, &verts) >> ablate::utilities::PetscUtilities::checkError;
-		for (PetscInt d = 0; d < dim; ++d) {
-		  printf("at x%d: %f: ", d, x0[d]);
-		}
-		printf("%+f\n", *curvVal);
-    }
-}
-  
- 
-  FILE* outputFile = fopen("levelset.txt", "w");
-  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
-
-    PetscInt vert = vertRange.GetPoint(v);
-        
-	PetscReal x0[dim];
-	DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
-	PetscScalar *lsval;
-	xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
-
-	for (PetscInt d = 0; d < dim; ++d) {
-	  fprintf(outputFile, "%+f\t", x0[d]);
-	}
-	
-	fprintf(outputFile, "%+f\n", *lsval);
-
-  }
-  fclose(outputFile);
-  
-  FILE* secFile = fopen("secondcurv.txt", "w");
+    
+  FILE* curv1File = fopen("curv1.txt", "w");
   for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
     PetscInt cell = cellRange.GetPoint(c);
 
@@ -2377,16 +976,16 @@ for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
 	PetscScalar *curvVal;
 	xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
 	for (PetscInt d = 0; d < dim; ++d) {
-	  fprintf(secFile, "%+f\t", x0[d]);
-	  //printf("at x%d: %f: ", d, x0[d]);
+	  fprintf(curv1File, "%+f\t", x0[d]);
 	}
 	
-	fprintf(secFile, "%+f\n", *curvVal);
-	//printf("%+f\n", *curvVal);
+	fprintf(curv1File, "%+f\n", *curvVal);
   }
-  fclose(secFile); 
+  fclose(curv1File); 
+//---------------------End of calculating the curvature based on DMPlexVertexGradFromVertex and DMPlexCellGradFromVertex (first method)---------------------//
   
-  FILE* firstFile = fopen("curv.txt", "w");
+//---------------------Calculating the curvature based on Curvature function RBF folder (second method)---------------------//
+  FILE* curv2File = fopen("curv2.txt", "w");
   for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
     PetscInt cell = cellRange.GetPoint(c);
     
@@ -2398,22 +997,39 @@ for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
 		xDMPlexPointLocalRead(curvDM, cell, curvID, curvArray, &curvVal) >> ablate::utilities::PetscUtilities::checkError;
 		*curvVal = (vrbf->Curvature(lsField, cell));
 		for (PetscInt d = 0; d < dim; ++d) {
-		  fprintf(firstFile, "%+f\t", x0[d]);
+		  fprintf(curv2File, "%+f\t", x0[d]);
 		}
 		
-		fprintf(firstFile, "%+f\n", *curvVal);
-		//printf("%d is %f\n", cell, *curvVal);    
+		fprintf(curv2File, "%+f\n", *curvVal); 
 	} 
   }
-  fclose(firstFile); 
+  fclose(curv2File); 
+//---------------------End of calculating the curvature based on Curvature function RBF folder (second method)---------------------//  
 
-  
+  FILE* LSFile = fopen("levelset.txt", "w"); // Printing the values of LS
+  for (PetscInt v = vertRange.start; v < vertRange.end; ++v) {
+
+    PetscInt vert = vertRange.GetPoint(v);
+        
+	PetscReal x0[dim];
+	DMPlexComputeCellGeometryFVM(lsDM, vert, NULL, x0, NULL) >> ablate::utilities::PetscUtilities::checkError;
+	PetscScalar *lsval;
+	xDMPlexPointLocalRef(lsDM, vert, lsID, lsArray, &lsval) >> ablate::utilities::PetscUtilities::checkError;
+
+	for (PetscInt d = 0; d < dim; ++d) {
+	  fprintf(LSFile, "%+f\t", x0[d]);
+	}
+	
+	fprintf(LSFile, "%+f\n", *lsval);
+
+  }
+  fclose(LSFile);
+
   vertMask += vertRange.start; // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
   DMRestoreWorkArray(lsDM, vertRange.end - vertRange.start, MPIU_INT, &vertMask) >> ablate::utilities::PetscUtilities::checkError;
   subDomain->RestoreRange(vertRange);
   cellMask += cellRange.start;  // Reset the offset, otherwise DMRestoreWorkArray will return unexpected results
   DMRestoreWorkArray(vofDM, cellRange.end - cellRange.start, MPIU_INT, &cellMask) >> ablate::utilities::PetscUtilities::checkError;
   subDomain->RestoreRange(cellRange);
-
 
 }
