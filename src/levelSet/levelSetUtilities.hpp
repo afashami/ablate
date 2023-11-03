@@ -146,13 +146,14 @@ void VertexUpwindGrad(DM dm, PetscReal *gradArray, AO cellToIndex, const PetscIn
 /**
  * Compute the leve-set field that corresponds to a volume-of-fluid field
  * @param rbf - The cell-centered RBF used to estimate the unit normal
+ * @param vrbf - The vertex-based RBF used to estimate the curvature
  * @param vofSubDomain - The domain containing the VOF data
  * @param vofField - Location of cell-centered VOF data
  * @param nLevels - The number of layers/levels to use surrounding each interface cell
  * @param lsSubDomain - The domain containing the LS data
  * @param lsField - Location of vertex-based LS data
  */
-void Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *curvField);
+void Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::rbf::RBF> vrbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *curvField, const ablate::domain::Field *iterField);
 
 }  // namespace ablate::levelSet::Utilities
 #endif  // ABLATELIBRARY_LEVELSETUTILITIES_HPP
