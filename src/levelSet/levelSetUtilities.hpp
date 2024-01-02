@@ -135,13 +135,14 @@ void VertexToVertexGrad(std::shared_ptr<ablate::domain::SubDomain> subDomain, co
 /**
  * Compute the upwind derivative
  * @param dm - Domain of the data
+ * @param dm - Domain of the data
  * @param gradArray - Array storing the cell-center gradients
  * @param cellToIndex - Petsc AO that convertes from DMPlex ordering to the index location in gradArray
  * @param p - Vertex id
  * @param direction - The direction to be considered upwind. +1 for standard upwind, -1 of downwind
  * @param g - The gradient at p
  */
-void VertexUpwindGrad(DM dm, PetscReal *gradArray, AO cellToIndex, const PetscInt p, const PetscReal direction, PetscReal *g);
+void VertexUpwindGrad(DM dm, DM gradDM, std::shared_ptr<ablate::domain::SubDomain> subDomain , const PetscInt gradID, PetscReal *gradArray, PetscInt *cellMask, const PetscInt p, const PetscReal direction, PetscReal *g);
 
 /**
  * Compute the leve-set field that corresponds to a volume-of-fluid field
@@ -153,7 +154,7 @@ void VertexUpwindGrad(DM dm, PetscReal *gradArray, AO cellToIndex, const PetscIn
  * @param lsSubDomain - The domain containing the LS data
  * @param lsField - Location of vertex-based LS data
  */
-void Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::rbf::RBF> vrbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *curvField, const ablate::domain::Field *iterField);
+void Reinitialize(std::shared_ptr<ablate::domain::rbf::RBF> rbf, std::shared_ptr<ablate::domain::rbf::RBF> vrbf, std::shared_ptr<ablate::domain::SubDomain> subDomain, const ablate::domain::Field *vofField, const PetscInt nLevels, const ablate::domain::Field *lsField, const ablate::domain::Field *normField, const ablate::domain::Field *gradField, const ablate::domain::Field *curvField, const ablate::domain::Field *iterField);
 
 }  // namespace ablate::levelSet::Utilities
 #endif  // ABLATELIBRARY_LEVELSETUTILITIES_HPP
