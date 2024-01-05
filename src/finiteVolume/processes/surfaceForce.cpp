@@ -284,7 +284,7 @@ xexit("");
 
 if (iter%100==0) {
   char fname1[255];
-  sprintf(fname1, "grad%d.txt", iter);
+  sprintf(fname1, "grad%" PetscInt_FMT".txt", iter);
   SaveVertexData(fname1, dm, dataVec, dim, dim, vertRange, gradID);
 }
     for (PetscInt c = cellRange.start; c < cellRange.end; ++c) {
@@ -380,10 +380,10 @@ if (iter%100==0) {
     }
 if (iter%100==0) {
   char fname[255];
-  sprintf(fname, "ls%d.txt", iter);
+  sprintf(fname, "ls%" PetscInt_FMT".txt", iter);
   SaveCellData(fname, dm, dataVec, dim, 1, cellRange, vofID);
 }
-    printf("%4d: %e\n", iter, diff);
+    printf("%4" PetscInt_FMT": %e\n", iter, diff);
 //xexit("");
   }
   xexit("");
