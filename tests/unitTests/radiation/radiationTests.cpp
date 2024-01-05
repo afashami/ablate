@@ -1,7 +1,6 @@
 #include <petsc.h>
 #include <mathFunctions/functionFactory.hpp>
 #include <memory>
-#include "MpiTestFixture.hpp"
 #include "builder.hpp"
 #include "convergenceTester.hpp"
 #include "domain/boxMesh.hpp"
@@ -14,6 +13,7 @@
 #include "finiteVolume/compressibleFlowFields.hpp"
 #include "gtest/gtest.h"
 #include "monitors/timeStepMonitor.hpp"
+#include "mpiTestFixture.hpp"
 #include "parameters/mapParameters.hpp"
 #include "radiation/radiation.hpp"
 #include "radiation/raySharingRadiation.hpp"
@@ -180,7 +180,6 @@ TEST_P(RadiationTestFixture, ShouldComputeCorrectSourceTerm) {
                                                                                  GetParam().meshFaces,
                                                                                  GetParam().meshStart,
                                                                                  GetParam().meshEnd,
-                                                                                 false,
                                                                                  ablate::parameters::MapParameters::Create({{"dm_plex_hash_location", "true"}}));
 
             // Setup the flow data

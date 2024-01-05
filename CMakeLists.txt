@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.18.4)
 include(config/petscCompilers.cmake)
 
 # Set the project details
-project(ablateLibrary VERSION 0.12.4)
+project(ablateLibrary VERSION 0.12.21)
 
 # Load the Required 3rd Party Libaries
 pkg_check_modules(PETSc REQUIRED IMPORTED_TARGET GLOBAL PETSc)
@@ -47,6 +47,7 @@ include(config/findTensorFlow.cmake)
 include(config/findChrestCompilerFlags.cmake)
 include(config/findSLEPc.cmake)
 include(config/printVersion.cmake)
+find_package(HDF5 REQUIRED)
 
 # specify in the required libaries
 target_link_libraries(ablateLibrary
@@ -61,8 +62,18 @@ target_link_libraries(ablateLibrary
         Tines::tines
         Threads::Threads
         nlohmann_json::nlohmann_json
+        ${HDF5_LIBRARIES}
         PRIVATE
         chrestCompilerFlags)
+
+# depending upon the build, we may need to add blas
+find_package(BLAS)
+if (BLAS_FOUND)
+    target_link_libraries(ablateLibrary
+            PUBLIC
+            BLAS::BLAS)
+endif ()
+
 
 # Set the ablate library requirements
 set_property(TARGET ablateLibrary PROPERTY CXX_EXTENSIONS ON)

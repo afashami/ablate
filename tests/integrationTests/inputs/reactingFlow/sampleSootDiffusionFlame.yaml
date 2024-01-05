@@ -1,6 +1,12 @@
 # Example 1D diffusion flame with soot and thermophoretic diffusion.  The diffusion flame only uses
 # the transport processes of the Navier–Stokes equations.
 ---
+test:
+  # a unique test name for this integration tests
+  name: sampleSootDiffusionFlame
+  # create a default assert that compares the log file
+  assert: "inputs/reactingFlow/sampleSootDiffusionFlame.txt"
+
 environment:
   title: _1DSampleSootDiffusionFlame
   tagDirectory: false
@@ -18,7 +24,6 @@ timestepper:
     faces: [ 50 ]
     lower: [ 0.0 ]
     upper: [ 0.01 ]
-    simplex: false
     options:
       dm_plex_hash_location: true
     preModifiers:

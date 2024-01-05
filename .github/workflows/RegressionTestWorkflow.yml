@@ -19,16 +19,12 @@ jobs:
         petscConfig: [ arch-ablate-opt ]
         tensorFlowConfig: [ "", "enabled_tf" ]
     runs-on: ${{ matrix.arch.runson }}
-    timeout-minutes: 240
 
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - name: Building tests
         run: |

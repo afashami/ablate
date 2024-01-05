@@ -1,6 +1,11 @@
 #### Description
 #A test of the rocket monitor output (thrust, specific impulse) using a simple 2d 5x20 plane of cells
 ---
+test:
+  # a unique test name for this integration tests
+  name: rocketMonitor
+  # create a default assert that compares the log file
+  assert: "inputs/monitors/rocketMonitor.txt"
 
 environment:
   title: rocketMonitor
@@ -21,7 +26,6 @@ timestepper:
     faces: [ 5, 40 ]
     lower: [ 0 , -0.5 ]
     upper: [ 0.5 , 0.5 ]
-    simplex: false
     preModifiers:
       - !ablate::domain::modifiers::DistributeWithGhostCells
     postModifiers:
